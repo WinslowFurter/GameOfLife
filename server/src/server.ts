@@ -72,7 +72,7 @@ const updateGridPeriodically = () => {
     setInterval(() => {
         grid = getNextState(grid);
         io.emit('updateGrid', grid); // Broadcast the updated grid to all clients
-    }, 50); // Update every 0,05 second
+    }, 200); // Update every 0,05 second
 };
 
 // Start periodic grid updates

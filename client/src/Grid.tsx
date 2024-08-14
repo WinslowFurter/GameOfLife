@@ -3,8 +3,7 @@ import io, { Socket } from 'socket.io-client';
 import Cell from './Cell';
 import { patterns } from './patterns';
 
-const ENDPOINT = "http://localhost:3001"
-
+const ENDPOINT = "http://localhost:3001";
 const socket: Socket = io(ENDPOINT, {
     transports: ['websocket']
 });
@@ -12,10 +11,15 @@ const socket: Socket = io(ENDPOINT, {
 const numRows = 50;
 const numCols = 80;
 
+interface CellState {
+    isAlive: boolean;
+    activeGenerations: number;
+}
+
 const Grid: React.FC = () => {
-    const [grid, setGrid] = useState<number[][]>(() => {
+    const [grid, setGrid] = useState<CellState[][]>(() => {
         return Array.from({ length: numRows }, () =>
-            Array.from({ length: numCols }, () => 0)
+            Array.from({ length: numCols }, () => ({ isAlive: false, activeGenerations: 0 }))
         );
     });
 
@@ -23,7 +27,15 @@ const Grid: React.FC = () => {
 
     useEffect(() => {
         socket.on('updateGrid', (newGrid: number[][]) => {
-            setGrid(newGrid);
+            const updatedGrid = newGrid.map((row, rowIndex) =>
+                row.map((cell, colIndex) => ({
+                    isAlive: cell === 1,
+                    activeGenerations: grid[rowIndex][colIndex].isAlive
+                        ? grid[rowIndex][colIndex].activeGenerations + 1
+                        : 0
+                }))
+            );
+            setGrid(updatedGrid);
         });
 
         socket.emit('requestInitialGrid');
@@ -31,7 +43,7 @@ const Grid: React.FC = () => {
         return () => {
             socket.off('updateGrid');
         };
-    }, []);
+    }, [grid]);
 
     const toggleCellState = (row: number, col: number) => {
         if (selectedPattern) {
@@ -39,14 +51,23 @@ const Grid: React.FC = () => {
             socket.emit('placePattern', { row, col, pattern });
         } else {
             const newGrid = grid.map((gridRow, i) =>
-                gridRow.map((cell, j) => (i === row && j === col ? 1 - cell : cell))
+                gridRow.map((cell, j) => {
+                    if (i === row && j === col) {
+                        const newIsAlive = !cell.isAlive;
+                        return {
+                            isAlive: newIsAlive,
+                            activeGenerations: newIsAlive ? cell.activeGenerations + 1 : 0
+                        };
+                    }
+                    return cell;
+                })
             );
             setGrid(newGrid);
 
             socket.emit('placePattern', {
                 row,
                 col,
-                pattern: [[newGrid[row][col]]]
+                pattern: [[newGrid[row][col].isAlive ? 1 : 0]]
             });
         }
     };
@@ -57,7 +78,7 @@ const Grid: React.FC = () => {
             flexDirection: 'column',
             justifyContent: 'space-around',
             alignItems: 'center',
-            height: '95vh'  // Facultatif, pour centrer verticalement sur toute la page
+            height: '95vh'  // Optional, to center vertically on the entire page
         }}>
             <div style={{ marginBottom: 10 }}>
                 {Object.keys(patterns).map((patternKey) => (
@@ -72,7 +93,8 @@ const Grid: React.FC = () => {
                     row.map((cell, colIndex) => (
                         <Cell
                             key={`${rowIndex}-${colIndex}`}
-                            isAlive={cell === 1}
+                            isAlive={cell.isAlive}
+                            activeGenerations={cell.activeGenerations}
                             onClick={() => toggleCellState(rowIndex, colIndex)}
                         />
                     ))

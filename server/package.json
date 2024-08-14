@@ -1,0 +1,25 @@
+{
+    "name": "server",
+    "version": "1.0.0",
+    "main": "src/server.ts",
+    "scripts": {
+        "start": "ts-node src/server.ts",
+        "dev": "ts-node-dev src/server.ts",
+        "build": "tsc"
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "express": "^4.19.2",
+        "http": "^0.0.1-security",
+        "socket.io": "^4.7.5"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^4.17.21",
+        "@types/node": "^17.0.21",
+        "@types/socket.io": "^3.0.2",
+        "ts-node": "^10.9.2",
+        "ts-node-dev": "^2.0.0",
+        "typescript": "^5.5.4"
+    }
+}

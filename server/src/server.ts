@@ -82,10 +82,12 @@ updateGridPeriodically();
 io.on('connection', (socket: Socket) => {
     console.log('A user connected:', socket.id);
 
-    // Send initial grid state to client
-    socket.emit('init', grid);
+    // Écouter les demandes pour la grille initiale
+    socket.on('requestInitialGrid', () => {
+        socket.emit('init', grid);
+    });
 
-    // Listen for grid updates
+    // Écouter les mises à jour de la grille par le client
     socket.on('placePattern', ({ row, col, pattern }: PatternCell) => {
         const newGrid = grid.map(arr => [...arr]);
 
@@ -100,13 +102,14 @@ io.on('connection', (socket: Socket) => {
         });
 
         grid = newGrid;
-        io.emit('updateGrid', grid); // Broadcast updated grid to all clients
+        io.emit('updateGrid', grid); // Diffuser la grille mise à jour à tous les clients
     });
 
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);
     });
 });
+
 
 // Start the server
 server.listen(PORT, () => {

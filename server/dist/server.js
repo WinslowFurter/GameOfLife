@@ -59,16 +59,18 @@ const updateGridPeriodically = () => {
     setInterval(() => {
         grid = getNextState(grid);
         io.emit('updateGrid', grid); // Broadcast the updated grid to all clients
-    }, 50); // Update every 1 second
+    }, 50); // Update every 0,05 second
 };
 // Start periodic grid updates
 updateGridPeriodically();
 // Handle socket.io connections
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
-    // Send initial grid state to client
-    socket.emit('init', grid);
-    // Listen for grid updates
+    // Écouter les demandes pour la grille initiale
+    socket.on('requestInitialGrid', () => {
+        socket.emit('init', grid);
+    });
+    // Écouter les mises à jour de la grille par le client
     socket.on('placePattern', ({ row, col, pattern }) => {
         const newGrid = grid.map(arr => [...arr]);
         pattern.forEach((patternRow, i) => {
@@ -81,7 +83,7 @@ io.on('connection', (socket) => {
             });
         });
         grid = newGrid;
-        io.emit('updateGrid', grid); // Broadcast updated grid to all clients
+        io.emit('updateGrid', grid); // Diffuser la grille mise à jour à tous les clients
     });
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);

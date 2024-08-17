@@ -1,27 +1,20 @@
 import React from 'react';
 
-interface CellProps {
+export interface CellProps {
     isAlive: boolean;
     activeGenerations: number;
+    color: string;
+    socketId: string | null; // Add socketId to track the user
     onClick: () => void;
 }
 
-const Cell: React.FC<CellProps> = ({ isAlive, activeGenerations, onClick }) => {
-    const checkColor = (): string => {
-        if (!isAlive) {
-            return 'white';
-        } else if (activeGenerations > 50) {
-            return 'red';
-        } else {
-            console.log(activeGenerations)
-            return 'black';
-        }
-    };
+const Cell: React.FC<CellProps> = ({ color, onClick }) => {
+
 
     const cellStyle = {
         width: '10px',
         height: '10px',
-        backgroundColor: checkColor(),
+        backgroundColor: color,
         border: '1px solid #ddd',
         display: 'inline-block',
         transition: 'background-color 0.3s ease'

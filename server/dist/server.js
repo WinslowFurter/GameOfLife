@@ -3,13 +3,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.cells = void 0;
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
 const cors_1 = __importDefault(require("cors")); // Import CORS
+const player_1 = require("./player");
 // Initialize constants and grid
 const numRows = 50;
 const numCols = 80;
+exports.cells = [];
 let grid = Array.from({ length: numRows }, () => Array.from({ length: numCols }, () => 0));
 const PORT = process.env.PORT || 3001;
 // Create Express app and HTTP server
@@ -59,13 +62,16 @@ const updateGridPeriodically = () => {
     setInterval(() => {
         grid = getNextState(grid);
         io.emit('updateGrid', grid); // Broadcast the updated grid to all clients
-    }, 50); // Update every 0,05 second
+    }, 150); // Update every 0,05 second
 };
 // Start periodic grid updates
 updateGridPeriodically();
 // Handle socket.io connections
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
+    const player = new player_1.Player(socket.id);
+    player.build();
+    console.log(player_1.players);
     // Écouter les demandes pour la grille initiale
     socket.on('requestInitialGrid', () => {
         socket.emit('init', grid);
@@ -86,13 +92,13 @@ io.on('connection', (socket) => {
         io.emit('updateGrid', grid); // Diffuser la grille mise à jour à tous les clients
     });
     socket.on('disconnect', () => {
+        player_1.players;
         console.log('User disconnected:', socket.id);
     });
 });
 // Start the server
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
-    console.log('POUET POUET POUET EHEHEHEH');
 });
 // Add error handling for connection errors
 io.engine.on("connection_error", (err) => {

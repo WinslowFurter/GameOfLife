@@ -23,26 +23,17 @@ export class Cell {
     }
 
     checkState(cellProps: CellProps) {
-        if (this.socketId !== null) {
-            if (!players.find(player => player.id === this.socketId)) {
-                this.socketId = null
-                this.setColor()
-            }
-        }
         if (this.isAlive && cellProps.isAlive) {
             this.activeGenerations++
             this.checkOwner(cellProps)
             this.checkActiveGenerations()
-            this.setColor()
             return
         } else if (this.isAlive !== cellProps.isAlive) {
             this.toggleState(cellProps)
             this.setColor()
-
             return
         } else if (this.isAlive && cellProps.isAlive) {
             this.setColor()
-
             return
         }
     }

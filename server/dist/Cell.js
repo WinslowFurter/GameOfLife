@@ -5,27 +5,46 @@ const player_1 = require("./player");
 const white = "rgba(255, 255, 255, 1)";
 const black = "rgba(0, 0, 0, 1)";
 class Cell {
-    constructor() {
+    constructor(id) {
         this.isAlive = false;
         this.socketId = null;
         this.color = white;
         this.activeGenerations = 0;
         this.cellAgeToGold = 50;
+        this.id = id;
     }
     checkState(cellProps) {
-        if (!this.isAlive && (this.isAlive === cellProps.isAlive)) {
+        if (this.socketId !== null) {
+            if (!player_1.players.find(player => player.id === this.socketId)) {
+                this.socketId = null;
+                this.setColor();
+            }
+        }
+        if (this.isAlive && cellProps.isAlive) {
+            this.activeGenerations++;
+            this.checkOwner(cellProps);
+            this.checkActiveGenerations();
+            this.setColor();
             return;
         }
         else if (this.isAlive !== cellProps.isAlive) {
             this.toggleState(cellProps);
+            this.setColor();
             return;
         }
         else if (this.isAlive && cellProps.isAlive) {
-            this.activeGenerations++;
-            this.checkActiveGenerations();
+            this.setColor();
+            return;
         }
     }
-    // Example method to toggle cell state
+    checkOwner(cellProps) {
+        if (cellProps.socketId === this.socketId) {
+            return;
+        }
+        else {
+            this.assimilateCell(cellProps);
+        }
+    }
     toggleState(cellProps) {
         this.isAlive = !this.isAlive;
         !this.isAlive ? this.setVirginCell() : this.assimilateCell(cellProps);
@@ -48,7 +67,7 @@ class Cell {
     assimilateCell(cellProps) {
         this.removeCellFromPlayerCollection();
         this.addCellToPlayerCollection(cellProps);
-        this.isAlive = true;
+        this.isAlive = cellProps.isAlive;
         this.socketId = cellProps.socketId;
         this.color = cellProps.color;
         this.activeGenerations = 0;
@@ -63,13 +82,15 @@ class Cell {
         return cellResume;
     }
     removeCellFromPlayerCollection() {
-        const player = player_1.players.find(player => player.id === this.socketId);
-        if (player) {
-            player.controledMatureCells = player.controledMatureCells.filter(cell => cell.socketId !== this.socketId);
-            player.controledCells = player.controledCells.filter(cell => cell.socketId !== this.socketId);
-        }
-        else {
-            this.setVirginCell();
+        if (this.socketId) {
+            const player = player_1.players.find(player => player.id === this.socketId);
+            if (player) {
+                player.controledMatureCells = player.controledMatureCells.filter(cell => cell.socketId !== this.socketId);
+                player.controledCells = player.controledCells.filter(cell => cell.socketId !== this.socketId);
+            }
+            else {
+                this.setVirginCell();
+            }
         }
     }
     addCellToPlayerCollection(cellProps) {
@@ -98,6 +119,15 @@ class Cell {
                 return;
             }
         }
+    }
+    clone() {
+        const newCell = new Cell(this.id);
+        newCell.isAlive = this.isAlive;
+        newCell.socketId = this.socketId;
+        newCell.color = this.color;
+        newCell.activeGenerations = this.activeGenerations;
+        newCell.cellAgeToGold = this.cellAgeToGold;
+        return newCell;
     }
 }
 exports.Cell = Cell;

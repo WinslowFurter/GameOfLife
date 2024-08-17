@@ -38,6 +38,7 @@ app.use(cors({
 
 // Function to get the next state of the grid based on Game of Life rules
 const getNextState = (currentGrid: Cell[][]): Cell[][] => {
+
     const newGrid = currentGrid.map(row => row.map(cell => cell.clone()));
 
     for (let row = 0; row < numRows; row++) {
@@ -179,7 +180,7 @@ const updateGridPeriodically = () => {
     setInterval(() => {
         grid = getNextState(grid);
         io.emit('updateGrid', grid); // Broadcast the updated grid to all clients
-    }, 50); // Update every 0,05 second
+    }, 250); // Update every 0,05 second
 };
 
 // Start periodic grid updates

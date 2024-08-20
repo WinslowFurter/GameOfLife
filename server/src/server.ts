@@ -2,8 +2,7 @@ import express from 'express';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors'; // Import CORS
-import { Player, players } from './player';
-import { getRandomContrastingColor } from "./Utils"
+import { Player, PlayerProps, players } from './player';
 import { Cell, CellProps } from './Cell';
 
 // Define types for exchanged data
@@ -46,40 +45,39 @@ const getNextState = (currentGrid: Cell[][]): Cell[][] => {
             for (let i = 0; i < playersExpelled.length; i++) {
                 if (newGrid[row][col].socketId === playersExpelled[i]) {
                     newGrid[row][col].socketId = null;
-                    newGrid[row][col].setColor()
                 }
             }
+            //passe en blanc des cell non-mortes
             newGrid[row][col].setColor()
             const aliveNeighbors = getAliveNeighbors(currentGrid, row, col);
 
-            const actualCell = newGrid[row][col]
-            let isAlive = actualCell.isAlive
-            let socketId = actualCell.socketId
-            let color = actualCell.color
-            let activeGenerations = actualCell.activeGenerations;
+            let activeGenerations = newGrid[row][col].activeGenerations;
 
             if (currentGrid[row][col].isAlive) {
-                actualCell.isAlive = aliveNeighbors === 2 || aliveNeighbors === 3 ? isAlive = true : isAlive = false;
+                newGrid[row][col].isAlive = aliveNeighbors === 2 || aliveNeighbors === 3 ? true : false;
             } else {
-                actualCell.isAlive = aliveNeighbors === 3 ? isAlive = true : isAlive = false;
+                newGrid[row][col].isAlive = aliveNeighbors === 3 ? true : false;
             }
 
             let cellProps: CellProps = {
                 isAlive: false,
                 socketId: null,
                 color: "rgba(255,255,255,1)",
-                activeGenerations: activeGenerations,
+                activeGenerations: 0,
+                id: currentGrid[row][col].id
             }
-            if (actualCell.isAlive) {
+
+            if (newGrid[row][col].isAlive) {
                 const MostCellProps = getAliveNeighborsCellProps(currentGrid, row, col)
                 cellProps = {
-                    isAlive: isAlive,
+                    isAlive: newGrid[row][col].isAlive,
                     socketId: MostCellProps.socketId,
                     color: MostCellProps.color,
                     activeGenerations: activeGenerations,
+                    id: currentGrid[row][col].id
                 }
             }
-            actualCell.checkState(cellProps)
+            newGrid[row][col].checkState(cellProps)
         }
     }
     playersExpelled.length = 0;
@@ -130,8 +128,6 @@ const getAliveNeighborsCellProps = (grid: Cell[][], row: number, col: number): C
     if (cellId) {
         mostRepresentedCell = findCellInGridById(grid, cellId)
     }
-    console.log("CACA PROUT")
-    console.log(mostRepresentedCell)
     if (mostRepresentedCell) {
         return mostRepresentedCell?.getCellResume()
     } else {
@@ -179,8 +175,10 @@ function elementLePlusRepresente<T>(tableau: T[]): T | null {
 const updateGridPeriodically = () => {
     setInterval(() => {
         grid = getNextState(grid);
+        const leaderboardPlayers = getPlayerResumes(players)
         io.emit('updateGrid', grid); // Broadcast the updated grid to all clients
-    }, 250); // Update every 0,05 second
+        io.emit('updateLeaderboard', leaderboardPlayers)
+    }, 130); // Update every 0,05 second
 };
 
 // Start periodic grid updates
@@ -201,9 +199,6 @@ io.on('connection', (socket: Socket) => {
     // Écouter les mises à jour de la grille par le client
     socket.on('placePattern', ({ row, col, pattern, socketId }: PatternCell) => {
 
-        console.log("ICI SE FONT LES TESTS TA KPT")
-        console.log(socketId)
-        console.log(col + " " + row)
         const newGrid = grid.map(row => row.map(cell => cell.clone()));
         pattern.forEach((patternRow, i) => {
             patternRow.forEach((patternCell, j) => {
@@ -222,8 +217,9 @@ io.on('connection', (socket: Socket) => {
                         socketId: socketId,
                         color: playerColor,
                         activeGenerations: 0,
+                        id: grid[newRow][newCol].id
+
                     }
-                    console.log(cellProps)
                     newGrid[newRow][newCol].checkState(cellProps);
                 }
             });
@@ -257,3 +253,7 @@ io.engine.on("connection_error", (err) => {
         console.log(err.context);  // some additional error context
     }
 });
+function getPlayerResumes(players: Player[]): PlayerProps[] {
+    return players.map(player => player.getPlayerResume());
+}
+

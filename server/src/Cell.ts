@@ -5,6 +5,7 @@ export interface CellProps {
     socketId: string | null;
     color: string;
     activeGenerations: number;
+    id: string
 }
 
 const white = "rgba(255, 255, 255, 1)"
@@ -23,14 +24,16 @@ export class Cell {
     }
 
     checkState(cellProps: CellProps) {
-        if (this.isAlive && cellProps.isAlive) {
+        this.activeGenerations = cellProps.activeGenerations
+        if ((this.isAlive === true && cellProps.isAlive === false) || (this.isAlive === false && cellProps.isAlive === true)) {
+            this.toggleState(cellProps)
+            this.setColor()
+            return
+        }
+        if (this.isAlive && cellProps.isAlive === true) {
             this.activeGenerations++
             this.checkOwner(cellProps)
             this.checkActiveGenerations()
-            return
-        } else if (this.isAlive !== cellProps.isAlive) {
-            this.toggleState(cellProps)
-            this.setColor()
             return
         } else if (this.isAlive && cellProps.isAlive) {
             this.setColor()
@@ -45,14 +48,13 @@ export class Cell {
         }
     }
     toggleState(cellProps: CellProps) {
-        this.isAlive = !this.isAlive;
-        !this.isAlive ? this.setVirginCell() : this.assimilateCell(cellProps)
+        this.isAlive ? this.isAlive = false : this.isAlive = true;
+        this.isAlive ? this.assimilateCell(cellProps) : this.setVirginCell()
     }
     checkActiveGenerations() {
         //Si la cellule est tout juste mature, la pousser dans le tableau de cellule mature du player
-        if (this.activeGenerations === this.cellAgeToGold) {
+        if (this.activeGenerations >= this.cellAgeToGold) {
             const player = players.find(player => player.id === this.socketId);
-
             if (player) {
                 player.controledMatureCells.push(this.getCellResume())
             }
@@ -65,12 +67,10 @@ export class Cell {
         this.isAlive = false;
     }
     assimilateCell(cellProps: CellProps) {
-        this.removeCellFromPlayerCollection()
-        this.addCellToPlayerCollection(cellProps)
+        this.activeGenerations = 0;
         this.isAlive = cellProps.isAlive;
         this.socketId = cellProps.socketId;
         this.color = cellProps.color;
-        this.activeGenerations = 0;
     }
     getCellResume(): CellProps {
         const cellResume: CellProps = {
@@ -78,29 +78,16 @@ export class Cell {
             socketId: this.socketId,
             color: this.color,
             activeGenerations: this.activeGenerations,
+            id: this.id
         }
         return cellResume
     }
-    removeCellFromPlayerCollection() {
-        if (this.socketId) {
-            const player = players.find(player => player.id === this.socketId);
-            if (player) {
-                player.controledMatureCells = player.controledMatureCells.filter(cell => cell.socketId !== this.socketId);
-                player.controledCells = player.controledCells.filter(cell => cell.socketId !== this.socketId);
-            } else {
-                this.setVirginCell()
-            }
-        }
-    }
-    addCellToPlayerCollection(cellProps: CellProps) {
-        const player = players.find(player => player.id === cellProps.socketId);
-        if (player) {
-            player.controledCells.push(this.getCellResume())
-        }
-    }
+
     setColor() {
 
-        if (!this.isAlive) { this.color = white; return }
+        if (!this.isAlive) {
+            this.color = white; return
+        }
 
         if (this.isAlive && (this.socketId === null)) { this.color = black; return }
 

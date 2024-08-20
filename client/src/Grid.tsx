@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
 import Cell, { CellProps } from './Cell';
 import { patterns } from './patterns';
+import Leaderboard, { Player } from './Leaderboard';
 
 const ENDPOINT = "http://localhost:3001";
 const socket: Socket = io(ENDPOINT, {
@@ -45,6 +46,9 @@ const Grid: React.FC = () => {
             );
             setGrid(updatedGrid);
         });
+        socket.on('updateLeaderboard', (players: Player[]) => {
+            handleLeaderboardUpdate(players)
+        })
 
         socket.emit('requestInitialGrid');
 
@@ -55,14 +59,18 @@ const Grid: React.FC = () => {
 
     const toggleCellState = (row: number, col: number) => {
         if (selectedPattern) {
-            console.log(selectedPattern)
             const pattern = patterns[selectedPattern];
             const socketId = socket.id
-            console.log(socketId)
             socket.emit('placePattern', { row, col, pattern, socketId });
         }
     };
+    const playersListRef = useRef<{ update: (newPlayers: Player[]) => void }>(null);
 
+    const handleLeaderboardUpdate = (players: Player[]) => {
+        if (playersListRef.current) {
+            playersListRef.current.update(players);
+        }
+    };
     return (
         <div style={{
             display: 'flex',
@@ -71,6 +79,9 @@ const Grid: React.FC = () => {
             alignItems: 'center',
             height: '95vh'  // Optional, to center vertically on the entire page
         }}>
+            <div>
+                <Leaderboard ref={playersListRef} />
+            </div>
             <div style={{ marginBottom: 10 }}>
                 {Object.keys(patterns).map((patternKey) => (
                     <button key={patternKey} onClick={() => setSelectedPattern(patternKey)}>

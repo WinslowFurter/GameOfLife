@@ -1,4 +1,5 @@
 import { CellProps } from "./Cell";
+import { getRandomPatternName } from "./Patterns";
 import { playersExpelled } from "./server";
 import { colorsForPlayers, getRandomContrastingColor } from "./Utils";
 
@@ -7,7 +8,8 @@ export interface PlayerProps {
     cells: number;
     golds: number;
     color: string;
-    nickname: string
+    nickname: string;
+    patternPool: string[]
 }
 interface cursorCoordinates {
     x: number;
@@ -28,6 +30,7 @@ export class Player {
     controledMatureCells: CellProps[] = [];
     gold: number = 0
     nickname: string = getRandomSurname()
+    patternPool: string[] = this.getFullPatternPool()
 
     constructor(id: string) {
         this.id = id
@@ -41,6 +44,15 @@ export class Player {
         }
     }
 
+    getFullPatternPool(): string[] {
+        const res: string[] = []
+        for (let i = 0; i < 10; i++) {
+            const patternName = getRandomPatternName()
+            res.push(patternName)
+        }
+        return res
+    }
+
     getPlayerResume(): PlayerProps {
         this.checkGoldGeneration()
         const playerResume: PlayerProps = {
@@ -48,7 +60,8 @@ export class Player {
             color: this.color,
             golds: this.gold,
             cells: this.controledMatureCells.length,
-            nickname: this.nickname
+            nickname: this.nickname,
+            patternPool: this.patternPool
         }
         this.controledMatureCells.length = 0
         return playerResume

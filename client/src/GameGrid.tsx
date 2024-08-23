@@ -2,24 +2,26 @@ import React, { useState, useEffect, useRef } from 'react';
 import io, { Socket } from 'socket.io-client';
 import Cell, { CellProps } from './Cell';
 import { patterns } from './patterns';
-import Leaderboard, { Player } from './Leaderboard';
+import Leaderboard from './Leaderboard';
+import CursorGrid from './CursorGrid';
+import { Player, updatePlayersGlobally } from './PlayersContext';
 
 const ENDPOINT = "http://localhost:3001";
-const socket: Socket = io(ENDPOINT, {
+export const socket: Socket = io(ENDPOINT, {
     transports: ['websocket']
 });
 
-const numRows = 50;
-const numCols = 80;
+export const numRows = 50;
+export const numCols = 80;
 
 interface CellState {
     isAlive: boolean;
     activeGenerations: number;
     socketId: string | null;
-    color: string
+    color: string;
 }
 
-const Grid: React.FC = () => {
+const GameGrid: React.FC = () => {
     const [grid, setGrid] = useState<CellState[][]>(() => {
         return Array.from({ length: numRows }, () =>
             Array.from({ length: numCols }, () => ({ isAlive: false, activeGenerations: 0, socketId: null, color: "rgba(255,255,255,0)" }))
@@ -28,14 +30,14 @@ const Grid: React.FC = () => {
 
     const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
 
+    // Déclaration de useRef dans le composant
+    const playersListRef = useRef<{ update: (newPlayers: Player[]) => void }>(null);
+
     useEffect(() => {
         socket.on('updateGrid', (newGrid: CellProps[][]) => {
             const updatedGrid = newGrid.map((row, rowIndex) =>
                 row.map((cell, colIndex) => {
                     const newCell = newGrid[rowIndex][colIndex];
-
-                    // If the cell is now alive, check neighbors to possibly update the socketId
-
                     return {
                         isAlive: newCell.isAlive,
                         activeGenerations: newCell.activeGenerations,
@@ -46,9 +48,12 @@ const Grid: React.FC = () => {
             );
             setGrid(updatedGrid);
         });
+
         socket.on('updateLeaderboard', (players: Player[]) => {
-            handleLeaderboardUpdate(players)
-        })
+            updatePlayersGlobally(players)
+            handleLeaderboardUpdate(players);
+
+        });
 
         socket.emit('requestInitialGrid');
 
@@ -60,52 +65,47 @@ const Grid: React.FC = () => {
     const toggleCellState = (row: number, col: number) => {
         if (selectedPattern) {
             const pattern = patterns[selectedPattern];
-            const socketId = socket.id
+            const socketId = socket.id;
             socket.emit('placePattern', { row, col, pattern, socketId });
         }
     };
-    const playersListRef = useRef<{ update: (newPlayers: Player[]) => void }>(null);
 
     const handleLeaderboardUpdate = (players: Player[]) => {
         if (playersListRef.current) {
             playersListRef.current.update(players);
         }
     };
+
     return (
         <div style={{
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'space-around',
             alignItems: 'center',
-            height: '95vh'  // Optional, to center vertically on the entire page
+            height: '95vh'
         }}>
             <div>
                 <Leaderboard ref={playersListRef} />
             </div>
-            <div style={{ marginBottom: 10 }}>
-                {Object.keys(patterns).map((patternKey) => (
-                    <button key={patternKey} onClick={() => setSelectedPattern(patternKey)}>
-                        {patternKey.replace(/([A-Z])/g, ' $1').trim()}
-                    </button>
-                ))}
-                <button onClick={() => setSelectedPattern(null)}>Clear</button>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: `repeat(${numCols}, 10px)` }}>
+            <div style={{ position: 'absolute', display: 'grid', gridTemplateColumns: `repeat(${numCols}, 10px)` }}>
                 {grid.map((row, rowIndex) =>
-                    row.map((cell, colIndex) => (
-                        <Cell
-                            key={`${rowIndex}-${colIndex}`}
-                            isAlive={cell.isAlive}
-                            activeGenerations={cell.activeGenerations}
-                            socketId={cell.socketId ? cell.socketId : null}
-                            color={cell.color}
-                            onClick={() => toggleCellState(rowIndex, colIndex)}
-                        />
-                    ))
+                    row.map((cell, colIndex) => {
+                        return (
+                            <Cell
+                                key={`${rowIndex}-${colIndex}`}
+                                isAlive={cell.isAlive}
+                                activeGenerations={cell.activeGenerations}
+                                socketId={cell.socketId ? cell.socketId : null}
+                                color={cell.color}
+                                onClick={() => toggleCellState(rowIndex, colIndex)}
+                            />
+                        );
+                    })
                 )}
+                <CursorGrid numRows={numRows} numCols={numCols} />
             </div>
         </div>
     );
 };
 
-export default Grid;
+export default GameGrid;

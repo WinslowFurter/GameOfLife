@@ -1,13 +1,5 @@
 import React, { useState, useImperativeHandle, forwardRef, CSSProperties } from 'react';
-
-// Définition du type Player
-export interface Player {
-    id: string;
-    cells: number;
-    golds: number;
-    color: string;
-    nickname: string
-}
+import { Player } from './PlayersContext';
 
 // Composant Leaderboard
 const Leaderboard = forwardRef<{ update: (newPlayers: Player[]) => void }, {}>(
@@ -26,7 +18,7 @@ const Leaderboard = forwardRef<{ update: (newPlayers: Player[]) => void }, {}>(
 
         const leaderboardStyle: CSSProperties = {
             width: '12.5%',
-            height: '800px',
+            height: '90vh',
             border: '1px solid #ddd',
             display: 'flex',
             alignItems: 'center',
@@ -40,7 +32,7 @@ const Leaderboard = forwardRef<{ update: (newPlayers: Player[]) => void }, {}>(
             <div style={leaderboardStyle}>
                 <ul>
                     {sortedPlayers.map((player) => (
-                        <li key={player.id}>
+                        <li key={player.socketId}>
                             <span style={{ color: player.color, fontWeight: 'bolder' }}>{player.nickname}</span> -
                             <span> Cells: {player.cells}</span> -
                             <span> Golds: {player.golds}</span>

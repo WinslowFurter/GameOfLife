@@ -1,6 +1,6 @@
 import { CellProps } from "./Cell";
 import { getRandomPatternName } from "./Patterns";
-import { playersExpelled } from "./server";
+import { placePattern, playersExpelled } from "./server";
 import { colorsForPlayers, getRandomContrastingColor } from "./Utils";
 
 export interface PlayerProps {
@@ -11,9 +11,9 @@ export interface PlayerProps {
     nickname: string;
     patternPool: string[]
 }
-interface cursorCoordinates {
-    x: number;
-    y: number;
+export interface cursorCoordinates {
+    row: number;
+    col: number;
 }
 
 export const players: Player[] = []
@@ -22,8 +22,8 @@ const grey = "rgba(113, 113, 113, 1)"
 
 export class Player {
     cursorPosition: cursorCoordinates = {
-        x: 1,
-        y: 1
+        row: 1,
+        col: 1
     };
     id: string;
     color: string = grey;
@@ -52,6 +52,19 @@ export class Player {
         }
         return res
     }
+    updateCursor(cursorCoordinates: cursorCoordinates) {
+        this.cursorPosition = cursorCoordinates
+    }
+
+    applyPattern() {
+        const pattern = this.patternPool.shift();
+        console.log("applied pattern : [ " + pattern + " ] by : [ " + this.nickname + " ]")
+        console.log(this.cursorPosition)
+        this.patternPool.push(getRandomPatternName())
+        if (pattern) {
+            placePattern(this.cursorPosition, pattern, this.id)
+        }
+    }
 
     getPlayerResume(): PlayerProps {
         this.checkGoldGeneration()
@@ -79,6 +92,9 @@ export class Player {
         players.push(this)
     }
 }
+export const findPlayerById = (id: string): Player | undefined => {
+    return players.find(player => player.id === id);
+};
 const medievalFrenchSurnames: string[] = [
     "Louis",
     "Lethullier",

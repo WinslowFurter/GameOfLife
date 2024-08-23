@@ -2,8 +2,10 @@ import express from 'express';
 import http from 'http';
 import { Server, Socket } from 'socket.io';
 import cors from 'cors'; // Import CORS
-import { Player, PlayerProps, players } from './player';
+import { cursorCoordinates, findPlayerById, Player, PlayerProps, players } from './player';
 import { Cell, CellProps } from './Cell';
+import { getPatternByName } from './Patterns';
+import { setInterval } from 'timers';
 
 // Define types for exchanged data
 interface PatternCell {
@@ -12,7 +14,10 @@ interface PatternCell {
     pattern: boolean[][];
     socketId: string;
 }
-
+interface CursorData {
+    coordinates: cursorCoordinates;
+    socketId: string
+}
 // Initialize constants and grid
 const numRows = 50;
 const numCols = 80;
@@ -178,11 +183,52 @@ const updateGridPeriodically = () => {
         const leaderboardPlayers = getPlayerResumes(players)
         io.emit('updateGrid', grid); // Broadcast the updated grid to all clients
         io.emit('updateLeaderboard', leaderboardPlayers)
-    }, 130); // Update every 0,05 second
+    }, 500); // Update every 0,05 second
 };
+
+const triggerPlayersPatternOnCursorPeriodically = () => {
+    setInterval(() => {
+        players.forEach(player => player.applyPattern())
+    }, 5000);
+}
 
 // Start periodic grid updates
 updateGridPeriodically();
+triggerPlayersPatternOnCursorPeriodically()
+
+export const placePattern = (cursorCoordinates: cursorCoordinates, patternName: string, socketId: string) => {
+    const row = cursorCoordinates.row
+    const col = cursorCoordinates.col
+    const pattern = getPatternByName(patternName)
+    if (!pattern) { return }
+    const newGrid = grid.map(row => row.map(cell => cell.clone()));
+    pattern.forEach((patternRow, i) => {
+        patternRow.forEach((patternCell, j) => {
+            const newRow = row + i;
+            const newCol = col + j;
+            if (newRow < numRows && newCol < numCols) {
+
+                const player = players.find(player => player.id === socketId)
+                let playerColor = "rgba(1,1,1,1)"
+                if (player) {
+                    playerColor = player.color
+                }
+
+                const cellProps: CellProps = {
+                    isAlive: patternCell,
+                    socketId: socketId,
+                    color: playerColor,
+                    activeGenerations: 0,
+                    id: grid[newRow][newCol].id
+
+                }
+                newGrid[newRow][newCol].checkState(cellProps);
+            }
+        });
+    });
+    grid = newGrid;
+    io.emit('updateGrid', grid);
+};
 
 // Handle socket.io connections
 io.on('connection', (socket: Socket) => {
@@ -194,6 +240,11 @@ io.on('connection', (socket: Socket) => {
     // Écouter les demandes pour la grille initiale
     socket.on('requestInitialGrid', () => {
         socket.emit('init', grid);
+    });
+
+    socket.on('updateCursor', ({ coordinates, socketId }: CursorData) => {
+        const player = findPlayerById(socketId);
+        if (player) { player.updateCursor(coordinates) }
     });
 
     // Écouter les mises à jour de la grille par le client

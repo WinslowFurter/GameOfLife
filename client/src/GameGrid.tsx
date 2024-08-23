@@ -4,7 +4,7 @@ import Cell, { CellProps } from './Cell';
 import { patterns } from './patterns';
 import Leaderboard from './Leaderboard';
 import CursorGrid from './CursorGrid';
-import { Player, updatePlayersGlobally } from './PlayersContext';
+import { Player, updatePlayersGlobally, usePlayers } from './PlayersContext';
 
 const ENDPOINT = "http://localhost:3001";
 export const socket: Socket = io(ENDPOINT, {
@@ -27,11 +27,22 @@ const GameGrid: React.FC = () => {
             Array.from({ length: numCols }, () => ({ isAlive: false, activeGenerations: 0, socketId: null, color: "rgba(255,255,255,0)" }))
         );
     });
+    const { players } = usePlayers(); // Correct usage of hook
 
     const [selectedPattern, setSelectedPattern] = useState<string | null>(null);
 
     // Déclaration de useRef dans le composant
     const playersListRef = useRef<{ update: (newPlayers: Player[]) => void }>(null);
+
+    useEffect(() => {
+        const currentPlayer = players.find(player => player.socketId === socket.id);
+
+        if (currentPlayer && currentPlayer.patternPool.length > 0) {
+            // Set the selected pattern to the first pattern in the pool or any other logic
+            setSelectedPattern(currentPlayer.patternPool[0]);
+        }
+    }, [players]); // Trigger this effect when the `players` array changes
+
 
     useEffect(() => {
         socket.on('updateGrid', (newGrid: CellProps[][]) => {
@@ -52,7 +63,6 @@ const GameGrid: React.FC = () => {
         socket.on('updateLeaderboard', (players: Player[]) => {
             updatePlayersGlobally(players)
             handleLeaderboardUpdate(players);
-
         });
 
         socket.emit('requestInitialGrid');

@@ -87,3 +87,7 @@ export function getRandomPatternName(): string {
     const randomIndex = Math.floor(Math.random() * weightedPatterns.length);
     return weightedPatterns[randomIndex];
 }
+export function getPatternByName(name: string): boolean[][] | undefined {
+    const patternData = Patterns[name];
+    return patternData ? patternData.pattern : undefined;
+}

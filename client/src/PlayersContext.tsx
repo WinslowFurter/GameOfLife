@@ -40,6 +40,11 @@ export const usePlayers = (): PlayersContextType => {
     return context;
 };
 
+export const getPlayerById = (id: string): Player => {
+    const { players } = usePlayers(); // Correct usage of hook
+    const player = players.find(player => player.socketId === id);
+    return player as Player
+}
 // Fonction d'exportation pour mettre à jour les joueurs
 export const updatePlayersGlobally = (players: Player[]) => {
     if (setPlayersGlobal) {
